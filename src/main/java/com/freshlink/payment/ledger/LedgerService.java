@@ -36,11 +36,17 @@ public class LedgerService {
 
 
     public void recordCredit(PaymentIntent intent, String ref) {
+        double prev = repo.findTopByUserEmailOrderByIdDesc(intent.getCustomerEmail())
+                .map(LedgerEntry::getBalanceAfter).orElse(0.0);
+
+        double newBal = prev + intent.getAmount();
+
         LedgerEntry entry = LedgerEntry.builder()
                 .intentId(intent.getId())
                 .userEmail(intent.getCustomerEmail())
                 .type(LedgerType.CREDIT)
                 .amount(intent.getAmount())
+                .balanceAfter(newBal)
                 .reference(ref)
                 .description("Payment credit")
                 .build();

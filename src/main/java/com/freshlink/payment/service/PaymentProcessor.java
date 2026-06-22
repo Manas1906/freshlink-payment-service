@@ -3,8 +3,8 @@ package com.freshlink.payment.service;
 import com.freshlink.event.payment.PaymentCompletedEvent;
 import com.freshlink.event.payment.PaymentFailedEvent;
 import com.freshlink.payment.engine.PaymentGatewayFactory;
-import com.freshlink.payment.event.PaymentEventPublisher;
 import com.freshlink.payment.gateway.PaymentGateway;
+import com.freshlink.payment.kafka.PaymentEventProducer;
 import com.freshlink.payment.ledger.LedgerService;
 import com.freshlink.payment.model.*;
 import com.freshlink.payment.repository.PaymentIntentRepository;
@@ -17,16 +17,16 @@ public class PaymentProcessor {
     private final PaymentIntentRepository intentRepo;
     private final LedgerService ledgerService;
     private final PaymentGatewayFactory factory;
-    private final PaymentEventPublisher publisher;
+    private final PaymentEventProducer producer;
 
     public PaymentProcessor(PaymentIntentRepository intentRepo,
                             LedgerService ledgerService,
                             PaymentGatewayFactory factory,
-                            PaymentEventPublisher publisher) {
+                            PaymentEventProducer producer) {
         this.intentRepo = intentRepo;
         this.ledgerService = ledgerService;
         this.factory = factory;
-        this.publisher = publisher;
+        this.producer = producer;
     }
 
     @Transactional
@@ -43,7 +43,7 @@ public class PaymentProcessor {
                 intent.setStatus(PaymentStatus.FAILED);
                 intentRepo.save(intent);
 
-                publisher.paymentFailed(
+                producer.failed(
                         new PaymentFailedEvent(
                                 intent.getId(),
                                 intent.getCheckoutId(),
@@ -60,7 +60,7 @@ public class PaymentProcessor {
 
             ledgerService.recordDebit(intent, result.getGatewayTxnId());
 
-            publisher.paymentSuccess(
+            producer.success(
                     new PaymentCompletedEvent(
                             intent.getId(),
                             intent.getCheckoutId(),
@@ -75,7 +75,7 @@ public class PaymentProcessor {
             intent.setStatus(PaymentStatus.FAILED);
             intentRepo.save(intent);
 
-            publisher.paymentFailed(
+            producer.failed(
                     new PaymentFailedEvent(
                             intent.getId(),
                             intent.getCheckoutId(),
