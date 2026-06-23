@@ -58,7 +58,9 @@ public class PaymentProcessor {
             intent.setStatus(PaymentStatus.SUCCESS);
             intentRepo.save(intent);
 
-            ledgerService.recordDebit(intent, result.getGatewayTxnId());
+            if (intent.getPaymentMode() == PaymentMode.WALLET) {
+                ledgerService.recordDebit(intent, result.getGatewayTxnId());
+            }
 
             producer.success(
                     new PaymentCompletedEvent(
